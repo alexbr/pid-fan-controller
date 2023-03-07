@@ -5,7 +5,7 @@ pid:
   sample_interval: 5
   min_output: 0.01
   max_output: 1.00
-  Kd: .014
+  Kd: .013
   Ki: .005
   Kd: .0025
 
