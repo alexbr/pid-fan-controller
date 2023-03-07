@@ -1,5 +1,4 @@
 # PID fan control config
-# sample interval
 pid:
   # Seconds
   sample_interval: 5
