@@ -1,0 +1,27 @@
+# PID fan control config
+# sample interval
+pid:
+  # Seconds
+  sample_interval: 5
+  min_output: 0.01
+  max_output: 1.00
+  Kd: .014
+  Ki: .005
+  Kd: .0025
+
+heat_sources:
+  - name: CPU
+    set_point: 52.0
+    temp_cmd: sensors | grep Core | awk '{print $3}' | sed 's/+\([0-9]\+\.[0-9]\).*/\1/g' | sort -rn | head -1 | tr -d '\n'
+  - name: Disks
+    set_point: 44.0
+    temp_cmd: for d in sda sdb sdc sde; do hddtemp -n /dev/${d};done | sort -rn | head -1
+    #temp_cmd: for d in sda sdb sdc sdd sde; do smartctl -A /dev/${d};done | grep -i temperature | awk '{print $10}' | sort -rn | head -1 | tr -d '\n'
+
+fans:
+  - name: Rear Fan
+    min_rpm: 700
+    max_rpm: 1400
+    duty_cmd: ipmitool raw 0x3a 0x02 | awk '{print strtonum("0x" $4)}'
+    rpm_cmd: ipmitool sensor get REAR_FAN2 | grep -i 'sensor reading' | awk '{print $4}'
+    set_cmd: ipmitool raw 0x3A 0x01 0x00 0x00 0x00 {duty_hex} 0x00 0x00 0x00 0x00
