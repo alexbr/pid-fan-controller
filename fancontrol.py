@@ -17,7 +17,7 @@ with open(config_file, 'r') as file:
     pid_config = config['pid']
     sample_interval = pid_config['sample_interval'] / 1.0
     pid = PID(sample_interval,
-              pid_config['Kd'],
+              pid_config['Kp'],
               pid_config['Ki'],
               pid_config['Kd'],
               pid_config['min_output'],

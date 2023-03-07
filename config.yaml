@@ -4,15 +4,18 @@ pid:
   sample_interval: 5
   min_output: 0.01
   max_output: 1.00
-  Kd: .013
+  # Proportional, integral, and derivative gains
+  Kp: .014
   Ki: .005
   Kd: .0025
 
 heat_sources:
   - name: CPU
+    # Target temperature
     set_point: 52.0
     temp_cmd: sensors | grep Core | awk '{print $3}' | sed 's/+\([0-9]\+\.[0-9]\).*/\1/g' | sort -rn | head -1 | tr -d '\n'
   - name: Disks
+    # Target temperature
     set_point: 44.0
     temp_cmd: for d in sda sdb sdc sde; do hddtemp -n /dev/${d};done | sort -rn | head -1
     #temp_cmd: for d in sda sdb sdc sdd sde; do smartctl -A /dev/${d};done | grep -i temperature | awk '{print $10}' | sort -rn | head -1 | tr -d '\n'
