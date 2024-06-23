@@ -222,7 +222,6 @@ class PID:
                 f'avg_target: {avg_set_points}')
 
             output = self.compute_output(avg_temp, avg_set_points)
-            # output = self.compute_output(max_temp, avg_set_points)
 
             output_duty = math.floor(100 * output)
             logger.info(f'target duty: {output_duty}%')
