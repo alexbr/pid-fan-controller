@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export CONFIG_FILE=/root/scripts/fancontrol/config.yaml
+export LOG_LEVEL=DEBUG
+
+/root/scripts/fancontrol/fancontrol.py

@@ -64,6 +64,7 @@ class HeatSource:
         self.name = name
         self.set_point = set_point
         self.temp_cmd = temp_cmd
+        self.temp = 0
 
     def get_temp(self):
         logger.debug(f'running: {self.temp_cmd}')
@@ -74,7 +75,52 @@ class HeatSource:
                                 executable='bash',
                                 capture_output=True)
 
-        return float(result.stdout)
+        self.temp = float(result.stdout)
+        return self.temp
+
+    def get_temp_cached(self):
+        return self.temp
+
+
+class HeatSourceTemps:
+    """ Temperatures for heat sources of a particular type. """
+
+    def __init__(self, name):
+        self.name = name
+        self.temps = []
+        self.set_points = []
+
+    def add_temp(self, temp):
+        self.temps.append(temp)
+
+    def get_max_temp(self):
+        return max(self.temps)
+
+    def get_min_temp(self):
+        return min(self.temps)
+
+    def get_avg_temp(self):
+        total = 0
+        for temp in self.temps:
+            total += temp
+
+        return total / len(self.temps)
+
+    def add_set_point(self, set_point):
+        self.set_points.append(set_point)
+
+    def get_max_set_point(self):
+        return max(self.set_points)
+
+    def get_min_set_point(self):
+        return min(self.set_points)
+
+    def get_avg_set_point(self):
+        total = 0
+        for set_point in self.set_points:
+            total += set_point
+
+        return total / len(self.set_points)
 
 
 class PID:
@@ -109,6 +155,7 @@ class PID:
         now = time.monotonic()
         dt = (now - self.last_run_time
               if self.last_run_time is not None else 1e-16)
+        # error = max(input - set_point, 0)
         error = input - set_point
         logger.debug(f'error: {error}')
 
@@ -120,7 +167,7 @@ class PID:
         derivative = self.Kd * error_diff / dt
         logger.debug(
             f'P: {proportional}, I [clamped]: {integral} [{integral_clamped}],'
-            ' D: {derivative}')
+            f' D: {derivative}')
 
         output = proportional + integral_clamped + derivative
         output_clamped = clamp(output, self.output_min, self.output_max)
@@ -132,6 +179,10 @@ class PID:
 
         return output_clamped
 
+    def normalize(self, num: float):
+        """ Normalize to a scale of 100. """
+        return num / 100
+
     def run_loop(self, heat_sources: list[HeatSource], fan: Fan):
         while True:
             fan_duty = fan.get_current_duty()
@@ -139,23 +190,42 @@ class PID:
 
             total_temp = 0
             total_set_point = 0
+            temps_by_source = {}
 
             for heat_source in heat_sources:
+                name = heat_source.name
                 temp = heat_source.get_temp()
                 set_point = heat_source.set_point
                 logger.info(
-                    f'{heat_source.name} temp: {temp}, target: {set_point}')
-                total_temp += temp
-                total_set_point += set_point
+                    f'{name} temp: {temp}, target: {set_point}')
 
-            # Average the obeserved temp and set points
-            avg_temp = total_temp / len(heat_sources)
-            avg_set_points = total_set_point / len(heat_sources)
+                if name not in temps_by_source:
+                    temps_by_source[name] = HeatSourceTemps(name)
+
+                temps_by_source[name].add_temp(temp)
+                temps_by_source[name].add_set_point(set_point)
+
+                # Normalize values
+                n_temp = self.normalize(temp)
+                n_set_point = self.normalize(set_point)
+                logger.info(f'{name} normalized temp: {n_temp}, '
+                            f'target: {n_set_point}')
+                total_temp += n_temp
+                total_set_point += n_set_point
+
+            # Average the observed temp and set points
+            num_heat_sources = len(heat_sources)
+            avg_temp = 100 * total_temp / num_heat_sources
+            avg_set_points = 100 * total_set_point / num_heat_sources
+            logger.info(
+                f'normalized avg_temp: {avg_temp}, '
+                f'avg_target: {avg_set_points}')
 
             output = self.compute_output(avg_temp, avg_set_points)
+            # output = self.compute_output(max_temp, avg_set_points)
 
             output_duty = math.floor(100 * output)
-            logger.debug(f'target duty: {output_duty}%')
+            logger.info(f'target duty: {output_duty}%')
 
             rpm = fan.duty_to_rpm(output_duty)
             logger.info(f'target RPM: {rpm} RPM')

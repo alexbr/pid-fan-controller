@@ -6,9 +6,7 @@ After=multi-user.target
 
 [Service]
 Type=simple
-Environment=CONFIG_FILE=/root/scripts/fancontrol/config.yaml
-Environment=LOG_LEVEL=INFO
-ExecStart=/root/scripts/fancontrol/fancontrol.py
+ExecStart=/root/scripts/fancontrol/fancontrol
 
 [Install]
 WantedBy=multi-user.target
